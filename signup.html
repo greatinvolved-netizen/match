@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Account</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="page-center">
+
+<div class="card">
+  <h1>Create Account</h1>
+  <p>Make your public profile card.</p>
+
+  <input id="emailInput" type="email" placeholder="Email">
+  <input id="passwordInput" type="password" placeholder="Password">
+  <input id="usernameInput" placeholder="Username">
+  <input id="interestsInput" placeholder="Interests, separated by commas">
+  <button id="signupBtn">Sign Up</button>
+
+  <p>Already have an account? <a class="secondary-link" href="index.html">Log in</a></p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+  authDomain: "chat4fun-e22c0.firebaseapp.com",
+  projectId: "chat4fun-e22c0",
+  storageBucket: "chat4fun-e22c0.firebasestorage.app",
+  messagingSenderId: "937250432936",
+  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+  measurementId: "G-NJMKG24NRM"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+document.getElementById("signupBtn").onclick = async () => {
+  const email = document.getElementById("emailInput").value.trim();
+  const password = document.getElementById("passwordInput").value;
+  const username = document.getElementById("usernameInput").value.trim();
+  const interests = document.getElementById("interestsInput").value.trim();
+
+  if (!username) {
+    alert("Please enter a username.");
+    return;
+  }
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+    await updateProfile(cred.user, { displayName: username });
+
+    await setDoc(doc(db, "users", cred.user.uid), {
+      uid: cred.user.uid,
+      email,
+      username,
+      bio: "",
+      avatar: "",
+      interests,
+      color: "#667eea",
+      status: "Available",
+      createdAt: serverTimestamp()
+    });
+
+    window.location.href = "directory.html";
+  } catch (error) {
+    alert(error.message);
+  }
+};
+</script>
+
+</body>
+</html>
