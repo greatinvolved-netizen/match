@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Messages</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">Chat4Fun</div>
+  <nav class="nav">
+    <a href="directory.html">Browse</a>
+    <a href="profile.html">My Profile</a>
+    <button id="logoutBtn">Log Out</button>
+  </nav>
+</header>
+
+<div class="message-page">
+  <aside class="conversations">
+    <div style="padding:14px">
+      <h3>Conversations</h3>
+      <p class="muted">Start a message from a profile card.</p>
+    </div>
+    <div id="conversationList"></div>
+  </aside>
+
+  <main class="chat-area">
+    <div class="chat-header">
+      <h2 id="chatTitle">Select a conversation</h2>
+      <p id="chatSubtitle" class="muted"></p>
+    </div>
+
+    <div id="messagesBox"></div>
+
+    <div class="chat-input">
+      <input id="messageInput" placeholder="Type a message..." disabled>
+      <button id="sendBtn" disabled>Send</button>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, query, where, orderBy,
+  onSnapshot, serverTimestamp, doc, getDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+  authDomain: "chat4fun-e22c0.firebaseapp.com",
+  projectId: "chat4fun-e22c0",
+  storageBucket: "chat4fun-e22c0.firebasestorage.app",
+  messagingSenderId: "937250432936",
+  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+  measurementId: "G-NJMKG24NRM"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const conversationList = document.getElementById("conversationList");
+const messagesBox = document.getElementById("messagesBox");
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const chatTitle = document.getElementById("chatTitle");
+const chatSubtitle = document.getElementById("chatSubtitle");
+
+let currentUser = null;
+let currentProfile = null;
+let selectedUid = new URLSearchParams(window.location.search).get("uid");
+let selectedProfile = null;
+let unsubscribeMessages = null;
+
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  currentUser = user;
+  const ownSnap = await getDoc(doc(db, "users", user.uid));
+  currentProfile = ownSnap.exists() ? ownSnap.data() : { username: user.email };
+
+  await loadConversations();
+
+  if (selectedUid) {
+    await openConversation(selectedUid);
+  }
+});
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await signOut(auth);
+  window.location.href = "index.html";
+};
+
+function getConversationId(a, b) {
+  return [a, b].sort().join("_");
+}
+
+async function loadConversations() {
+  conversationList.innerHTML = "";
+
+  const sentQ = query(collection(db, "messages"), where("senderId", "==", currentUser.uid));
+  const receivedQ = query(collection(db, "messages"), where("receiverId", "==", currentUser.uid));
+
+  const ids = new Set();
+
+  const sentSnap = await getDocs(sentQ);
+  sentSnap.forEach(d => ids.add(d.data().receiverId));
+
+  const receivedSnap = await getDocs(receivedQ);
+  receivedSnap.forEach(d => ids.add(d.data().senderId));
+
+  if (selectedUid) ids.add(selectedUid);
+
+  for (const uid of ids) {
+    if (!uid || uid === currentUser.uid) continue;
+
+    const userSnap = await getDoc(doc(db, "users", uid));
+    const user = userSnap.exists() ? userSnap.data() : { uid, username: "User" };
+
+    const div = document.createElement("div");
+    div.className = "conversation";
+    div.textContent = user.username || "User";
+    div.onclick = () => openConversation(uid);
+    conversationList.appendChild(div);
+  }
+}
+
+async function openConversation(uid) {
+  selectedUid = uid;
+
+  const snap = await getDoc(doc(db, "users", uid));
+  selectedProfile = snap.exists() ? snap.data() : { uid, username: "User" };
+
+  chatTitle.textContent = selectedProfile.username || "User";
+  chatSubtitle.textContent = selectedProfile.status || "";
+  messageInput.disabled = false;
+  sendBtn.disabled = false;
+
+  if (unsubscribeMessages) unsubscribeMessages();
+
+  const conversationId = getConversationId(currentUser.uid, selectedUid);
+
+  const q = query(
+    collection(db, "messages"),
+    where("conversationId", "==", conversationId),
+    orderBy("createdAt")
+  );
+
+  unsubscribeMessages = onSnapshot(q, snapshot => {
+    messagesBox.innerHTML = "";
+
+    snapshot.forEach(docSnap => {
+      const msg = docSnap.data();
+
+      const div = document.createElement("div");
+      div.className = "msg" + (msg.senderId === currentUser.uid ? " mine" : "");
+
+      const time = msg.createdAt
+        ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "";
+
+      div.innerHTML = `
+        <div>${escapeHTML(msg.text)}</div>
+        <small>${escapeHTML(msg.senderName || "")} • ${time}</small>
+      `;
+
+      messagesBox.appendChild(div);
+    });
+
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  });
+}
+
+async function sendMessage() {
+  const text = messageInput.value.trim();
+  if (!text || !selectedUid || !currentUser) return;
+
+  const conversationId = getConversationId(currentUser.uid, selectedUid);
+
+  await addDoc(collection(db, "messages"), {
+    conversationId,
+    senderId: currentUser.uid,
+    receiverId: selectedUid,
+    senderName: currentProfile?.username || currentUser.email,
+    receiverName: selectedProfile?.username || "User",
+    text,
+    createdAt: serverTimestamp()
+  });
+
+  messageInput.value = "";
+  await loadConversations();
+}
+
+sendBtn.onclick = sendMessage;
+
+messageInput.addEventListener("keypress", e => {
+  if (e.key === "Enter") sendMessage();
+});
+
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, m => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[m]));
+}
+</script>
+
+</body>
+</html>
