@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat4Fun Directory</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">Chat4Fun</div>
+  <nav class="nav">
+    <a href="directory.html">Browse</a>
+    <a href="profile.html">My Profile</a>
+    <a href="messages.html">Messages</a>
+    <button id="logoutBtn">Log Out</button>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <div class="hero-panel">
+      <h1>Find people to talk to.</h1>
+      <p>Browse public profile cards, discover shared interests, and start safe direct conversations.</p>
+      <div class="search-row">
+        <input id="searchInput" placeholder="Search usernames, bios, interests...">
+      </div>
+    </div>
+    <div class="hero-panel">
+      <h2>Community Board</h2>
+      <p class="muted">Profiles are visible to logged-in users. Keep bios respectful and avoid sharing private info.</p>
+      <button onclick="window.location.href='profile.html'">Edit My Profile</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Profiles</h2>
+    <div id="profilesGrid" class="grid"></div>
+  </section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+  authDomain: "chat4fun-e22c0.firebaseapp.com",
+  projectId: "chat4fun-e22c0",
+  storageBucket: "chat4fun-e22c0.firebasestorage.app",
+  messagingSenderId: "937250432936",
+  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+  measurementId: "G-NJMKG24NRM"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const grid = document.getElementById("profilesGrid");
+const searchInput = document.getElementById("searchInput");
+let allProfiles = [];
+let currentUser = null;
+
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+  currentUser = user;
+});
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await signOut(auth);
+  window.location.href = "index.html";
+};
+
+const q = query(collection(db, "users"), orderBy("username"));
+
+onSnapshot(q, snapshot => {
+  allProfiles = [];
+  snapshot.forEach(docSnap => allProfiles.push(docSnap.data()));
+  renderProfiles();
+});
+
+searchInput.addEventListener("input", renderProfiles);
+
+function renderProfiles() {
+  const term = searchInput.value.toLowerCase();
+  grid.innerHTML = "";
+
+  allProfiles
+    .filter(user => {
+      const text = `${user.username || ""} ${user.bio || ""} ${user.interests || ""} ${user.status || ""}`.toLowerCase();
+      return text.includes(term);
+    })
+    .forEach(user => {
+      const card = document.createElement("div");
+      card.className = "profile-card";
+      card.style.setProperty("--profile-color", user.color || "#667eea");
+
+      const tags = (user.interests || "")
+        .split(",")
+        .map(t => t.trim())
+        .filter(Boolean)
+        .slice(0, 5);
+
+      card.innerHTML = `
+        <img src="${user.avatar || "https://via.placeholder.com/82"}" alt="avatar">
+        <h3>${escapeHTML(user.username || "User")}</h3>
+        <div class="muted">${escapeHTML(user.status || "Available")}</div>
+        <p>${escapeHTML(user.bio || "No bio yet.")}</p>
+        <div class="tags">
+          ${tags.map(t => `<span class="tag">${escapeHTML(t)}</span>`).join("")}
+        </div>
+        <div class="profile-actions">
+          <button onclick="location.href='view-profile.html?uid=${user.uid}'">View</button>
+          <button onclick="location.href='messages.html?uid=${user.uid}'">Message</button>
+        </div>
+      `;
+
+      grid.appendChild(card);
+    });
+}
+
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, m => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[m]));
+}
+</script>
+
+</body>
+</html>
