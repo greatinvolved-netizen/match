@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat4Fun Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="page-center">
+
+<div class="card">
+  <h1>Chat4Fun</h1>
+  <p>Log in to browse profiles and message people.</p>
+
+  <input id="emailInput" type="email" placeholder="Email">
+  <input id="passwordInput" type="password" placeholder="Password">
+  <button id="loginBtn">Log In</button>
+
+  <p>New here? <a class="secondary-link" href="signup.html">Create an account</a></p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+  authDomain: "chat4fun-e22c0.firebaseapp.com",
+  projectId: "chat4fun-e22c0",
+  storageBucket: "chat4fun-e22c0.firebasestorage.app",
+  messagingSenderId: "937250432936",
+  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+  measurementId: "G-NJMKG24NRM"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, user => {
+  if (user) window.location.href = "directory.html";
+});
+
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("emailInput").value.trim();
+  const password = document.getElementById("passwordInput").value;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.href = "directory.html";
+  } catch (error) {
+    alert(error.message);
+  }
+};
+</script>
+
+</body>
+</html>
