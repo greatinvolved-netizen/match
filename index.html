@@ -3,9 +3,7 @@
 <head>
   <title>Chat4Fun</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -19,8 +17,8 @@
 
     .app {
       width: 95%;
-      max-width: 850px;
-      height: 90vh;
+      max-width: 900px;
+      height: 92vh;
       background: white;
       border-radius: 20px;
       overflow: hidden;
@@ -36,15 +34,28 @@
       text-align: center;
     }
 
-    header h1 {
-      margin: 0;
-      font-size: 28px;
+    header h1 { margin: 0; }
+    header p { margin: 5px 0 0; color: #bbb; }
+
+    #authArea {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: #f0f0f0;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
-    header p {
-      margin: 5px 0 0;
-      color: #bbb;
-      font-size: 14px;
+    #authArea input {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    #userStatus {
+      width: 100%;
+      font-size: 13px;
+      color: #555;
+      margin: 0;
     }
 
     #chatBox {
@@ -97,45 +108,32 @@
       outline: none;
     }
 
-    input:focus {
-      border-color: #667eea;
-    }
+    input:focus { border-color: #667eea; }
 
-    #nameInput {
-      width: 25%;
-    }
-
-    #messageInput {
-      flex: 1;
-    }
+    #nameInput { width: 25%; }
+    #messageInput { flex: 1; }
 
     button {
       border: none;
       background: #667eea;
       color: white;
-      padding: 0 20px;
+      padding: 10px 16px;
       border-radius: 12px;
       font-size: 15px;
       cursor: pointer;
       font-weight: bold;
     }
 
-    button:hover {
-      background: #5568d8;
+    button:hover { background: #5568d8; }
+
+    #logoutBtn {
+      background: #444;
     }
 
-    @media (max-width: 600px) {
-      #inputArea {
-        flex-direction: column;
-      }
-
-      #nameInput {
-        width: 100%;
-      }
-
-      .msg {
-        max-width: 95%;
-      }
+    @media (max-width: 650px) {
+      #inputArea { flex-direction: column; }
+      #nameInput { width: 100%; }
+      .msg { max-width: 95%; }
     }
   </style>
 </head>
@@ -148,6 +146,15 @@
     <p>Live public chat room</p>
   </header>
 
+  <div id="authArea">
+    <input id="emailInput" placeholder="Email">
+    <input id="passwordInput" type="password" placeholder="Password">
+    <button id="signupBtn">Sign Up</button>
+    <button id="loginBtn">Log In</button>
+    <button id="logoutBtn">Log Out</button>
+    <p id="userStatus">Not logged in</p>
+  </div>
+
   <div id="chatBox"></div>
 
   <div id="inputArea">
@@ -159,6 +166,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+
   import {
     getFirestore,
     collection,
@@ -169,8 +177,16 @@
     serverTimestamp
   } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
   const firebaseConfig = {
-   apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+    apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
     authDomain: "chat4fun-e22c0.firebaseapp.com",
     projectId: "chat4fun-e22c0",
     storageBucket: "chat4fun-e22c0.firebasestorage.app",
@@ -181,11 +197,19 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
 
   const chatBox = document.getElementById("chatBox");
   const nameInput = document.getElementById("nameInput");
   const messageInput = document.getElementById("messageInput");
   const sendBtn = document.getElementById("sendBtn");
+
+  const emailInput = document.getElementById("emailInput");
+  const passwordInput = document.getElementById("passwordInput");
+  const signupBtn = document.getElementById("signupBtn");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const userStatus = document.getElementById("userStatus");
 
   nameInput.value = localStorage.getItem("chatUsername") || "";
 
@@ -193,15 +217,54 @@
     localStorage.setItem("chatUsername", nameInput.value);
   });
 
+  signupBtn.onclick = async () => {
+    try {
+      await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+      alert("Account created!");
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  loginBtn.onclick = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+      alert("Logged in!");
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  logoutBtn.onclick = async () => {
+    await signOut(auth);
+  };
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      userStatus.textContent = "Logged in as " + user.email;
+    } else {
+      userStatus.textContent = "Not logged in";
+    }
+  });
+
   async function sendMessage() {
+    const user = auth.currentUser;
+
+    if (!user) {
+      alert("You must log in before sending messages.");
+      return;
+    }
+
     const name = nameInput.value.trim() || "Anonymous";
     const text = messageInput.value.trim();
 
     if (text === "") return;
 
     await addDoc(collection(db, "messages"), {
-      name,
-      text,
+      uid: user.uid,
+      email: user.email,
+      name: name,
+      text: text,
       createdAt: serverTimestamp()
     });
 
