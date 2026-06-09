@@ -1,10 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat4Fun</title>
+  <title>Chat4Fun</title>
+  <style>
+    body { font-family: Arial; max-width: 800px; margin: auto; }
+    #chatBox { border: 1px solid #ccc; height: 400px; overflow-y: scroll; padding: 10px; }
+    input { padding: 8px; margin: 5px; }
+  </style>
 </head>
 <body>
-    <h1>Welcome to Chat4Fun!</h1>
-    <p>The website is working.</p>
+
+<h1>Chat4Fun</h1>
+
+<div id="chatBox"></div>
+
+<input id="nameInput" placeholder="Username">
+<input id="messageInput" placeholder="Message">
+<button id="sendBtn">Send</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+  authDomain: "chat4fun-e22c0.firebaseapp.com",
+  projectId: "chat4fun-e22c0",
+  storageBucket: "chat4fun-e22c0.firebasestorage.app",
+  messagingSenderId: "937250432936",
+  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+  measurementId: "G-NJMKG24NRM"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const chatBox = document.getElementById("chatBox");
+const sendBtn = document.getElementById("sendBtn");
+
+sendBtn.onclick = async () => {
+  const name = document.getElementById("nameInput").value || "Anonymous";
+  const text = document.getElementById("messageInput").value;
+
+  if (!text.trim()) return;
+
+  await addDoc(collection(db, "messages"), {
+    name,
+    text,
+    createdAt: serverTimestamp()
+  });
+
+  document.getElementById("messageInput").value = "";
+};
+
+const q = query(collection(db, "messages"), orderBy("createdAt"));
+
+onSnapshot(q, (snapshot) => {
+  chatBox.innerHTML = "";
+
+  snapshot.forEach((doc) => {
+    const msg = doc.data();
+
+    chatBox.innerHTML += `
+      <div>
+        <b>${msg.name}</b>: ${msg.text}
+      </div>
+    `;
+  });
+
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
+</script>
+
 </body>
 </html>
