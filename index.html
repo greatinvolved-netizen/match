@@ -3,81 +3,165 @@
 <head>
   <title>Chat4Fun</title>
   <style>
-    body { font-family: Arial; max-width: 800px; margin: auto; }
-    #chatBox { border: 1px solid #ccc; height: 400px; overflow-y: scroll; padding: 10px; }
-    input { padding: 8px; margin: 5px; }
+    body {
+      font-family: Arial;
+      max-width: 800px;
+      margin: auto;
+      background: #f4f4f4;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #chatBox {
+      background: white;
+      border: 1px solid #ccc;
+      height: 450px;
+      overflow-y: auto;
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    .msg {
+      background: #e9e9e9;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .time {
+      font-size: 12px;
+      color: gray;
+    }
+
+    #inputArea {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    #nameInput {
+      width: 25%;
+    }
+
+    #messageInput {
+      flex: 1;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+    }
   </style>
 </head>
+
 <body>
 
 <h1>Chat4Fun</h1>
 
 <div id="chatBox"></div>
 
-<input id="nameInput" placeholder="Username">
-<input id="messageInput" placeholder="Message">
-<button id="sendBtn">Send</button>
+<div id="inputArea">
+  <input id="nameInput" placeholder="Username">
+  <input id="messageInput" placeholder="Type a message...">
+  <button id="sendBtn">Send</button>
+</div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  query,
-  orderBy,
-  onSnapshot,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    query,
+    orderBy,
+    onSnapshot,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
-  authDomain: "chat4fun-e22c0.firebaseapp.com",
-  projectId: "chat4fun-e22c0",
-  storageBucket: "chat4fun-e22c0.firebasestorage.app",
-  messagingSenderId: "937250432936",
-  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
-  measurementId: "G-NJMKG24NRM"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+    authDomain: "chat4fun-e22c0.firebaseapp.com",
+    projectId: "chat4fun-e22c0",
+    storageBucket: "chat4fun-e22c0.firebasestorage.app",
+    messagingSenderId: "937250432936",
+    appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+    measurementId: "G-NJMKG24NRM"
+  };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-const chatBox = document.getElementById("chatBox");
-const sendBtn = document.getElementById("sendBtn");
+  const chatBox = document.getElementById("chatBox");
+  const nameInput = document.getElementById("nameInput");
+  const messageInput = document.getElementById("messageInput");
+  const sendBtn = document.getElementById("sendBtn");
 
-sendBtn.onclick = async () => {
-  const name = document.getElementById("nameInput").value || "Anonymous";
-  const text = document.getElementById("messageInput").value;
+  // Remember username
+  nameInput.value = localStorage.getItem("chatUsername") || "";
 
-  if (!text.trim()) return;
-
-  await addDoc(collection(db, "messages"), {
-    name,
-    text,
-    createdAt: serverTimestamp()
+  nameInput.addEventListener("input", () => {
+    localStorage.setItem("chatUsername", nameInput.value);
   });
 
-  document.getElementById("messageInput").value = "";
-};
+  async function sendMessage() {
+    const name = nameInput.value.trim() || "Anonymous";
+    const text = messageInput.value.trim();
 
-const q = query(collection(db, "messages"), orderBy("createdAt"));
+    if (text === "") return;
 
-onSnapshot(q, (snapshot) => {
-  chatBox.innerHTML = "";
+    await addDoc(collection(db, "messages"), {
+      name: name,
+      text: text,
+      createdAt: serverTimestamp()
+    });
 
-  snapshot.forEach((doc) => {
-    const msg = doc.data();
+    messageInput.value = "";
+  }
 
-    chatBox.innerHTML += `
-      <div>
-        <b>${msg.name}</b>: ${msg.text}
-      </div>
-    `;
+  sendBtn.onclick = sendMessage;
+
+  // Enter key sends message
+  messageInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      sendMessage();
+    }
   });
 
-  chatBox.scrollTop = chatBox.scrollHeight;
-});
+  const q = query(collection(db, "messages"), orderBy("createdAt"));
+
+  onSnapshot(q, (snapshot) => {
+    chatBox.innerHTML = "";
+
+    snapshot.forEach((doc) => {
+      const msg = doc.data();
+
+      let time = "";
+      if (msg.createdAt) {
+        time = new Date(msg.createdAt.seconds * 1000).toLocaleTimeString();
+      }
+
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "msg";
+
+      messageDiv.innerHTML = `
+        <b>${msg.name}</b>
+        <div>${msg.text}</div>
+        <div class="time">${time}</div>
+      `;
+
+      chatBox.appendChild(messageDiv);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
 </script>
 
 </body>
