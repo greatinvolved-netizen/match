@@ -1,189 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat4Fun</title>
+  <title>Chat4Fun Login</title>
   <style>
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .app {
-      width: 95%;
-      max-width: 900px;
-      height: 92vh;
-      background: white;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-      display: flex;
-      flex-direction: column;
-    }
-
-    header {
-      background: #202124;
-      color: white;
-      padding: 18px;
-      text-align: center;
-    }
-
-    header h1 { margin: 0; }
-    header p { margin: 5px 0 0; color: #bbb; }
-
-    #authArea {
-      display: flex;
-      gap: 8px;
-      padding: 12px;
-      background: #f0f0f0;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    #authArea input {
-      flex: 1;
-      min-width: 150px;
-    }
-
-    #userStatus {
-      width: 100%;
-      font-size: 13px;
-      color: #555;
-      margin: 0;
-    }
-
-    #chatBox {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      background: #f5f7fb;
-    }
-
-    .msg {
-      background: white;
-      padding: 12px 15px;
-      margin-bottom: 12px;
-      border-radius: 14px;
-      max-width: 75%;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
-    }
-
-    .username {
-      font-weight: bold;
-      color: #5b5fc7;
-      margin-bottom: 4px;
-    }
-
-    .text {
-      font-size: 15px;
-      line-height: 1.4;
-      word-wrap: break-word;
-    }
-
-    .time {
-      font-size: 11px;
-      color: gray;
-      margin-top: 6px;
-    }
-
-    #inputArea {
-      display: flex;
-      gap: 8px;
-      padding: 15px;
-      background: white;
-      border-top: 1px solid #ddd;
-    }
-
-    input {
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      padding: 12px;
-      font-size: 15px;
-      outline: none;
-    }
-
-    input:focus { border-color: #667eea; }
-
-    #nameInput { width: 25%; }
-    #messageInput { flex: 1; }
-
-    button {
-      border: none;
-      background: #667eea;
-      color: white;
-      padding: 10px 16px;
-      border-radius: 12px;
-      font-size: 15px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    button:hover { background: #5568d8; }
-
-    #logoutBtn {
-      background: #444;
-    }
-
-    @media (max-width: 650px) {
-      #inputArea { flex-direction: column; }
-      #nameInput { width: 100%; }
-      .msg { max-width: 95%; }
-    }
+    body { margin:0; font-family:Arial; background:linear-gradient(135deg,#667eea,#764ba2); height:100vh; display:flex; justify-content:center; align-items:center; }
+    .card { background:white; padding:35px; border-radius:20px; width:90%; max-width:400px; box-shadow:0 20px 40px rgba(0,0,0,.25); text-align:center; }
+    input, button { width:100%; padding:12px; margin:8px 0; border-radius:10px; font-size:16px; }
+    input { border:1px solid #ccc; }
+    button { border:none; background:#667eea; color:white; font-weight:bold; cursor:pointer; }
+    a { color:#667eea; font-weight:bold; }
   </style>
 </head>
-
 <body>
 
-<div class="app">
-  <header>
-    <h1>Chat4Fun</h1>
-    <p>Live public chat room</p>
-  </header>
+<div class="card">
+  <h1>Chat4Fun</h1>
+  <p>Log in to enter the chat</p>
 
-  <div id="authArea">
-    <input id="emailInput" placeholder="Email">
-    <input id="passwordInput" type="password" placeholder="Password">
-    <button id="signupBtn">Sign Up</button>
-    <button id="loginBtn">Log In</button>
-    <button id="logoutBtn">Log Out</button>
-    <p id="userStatus">Not logged in</p>
-  </div>
+  <input id="emailInput" type="email" placeholder="Email">
+  <input id="passwordInput" type="password" placeholder="Password">
+  <button id="loginBtn">Log In</button>
 
-  <div id="chatBox"></div>
-
-  <div id="inputArea">
-    <input id="nameInput" placeholder="Username">
-    <input id="messageInput" placeholder="Type a message...">
-    <button id="sendBtn">Send</button>
-  </div>
+  <p>Don't have an account? <a href="signup.html">Sign up</a></p>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-
-  import {
-    getFirestore,
-    collection,
-    addDoc,
-    query,
-    orderBy,
-    onSnapshot,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-  import {
-    getAuth,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
@@ -196,117 +39,23 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
   const auth = getAuth(app);
 
-  const chatBox = document.getElementById("chatBox");
-  const nameInput = document.getElementById("nameInput");
-  const messageInput = document.getElementById("messageInput");
-  const sendBtn = document.getElementById("sendBtn");
-
-  const emailInput = document.getElementById("emailInput");
-  const passwordInput = document.getElementById("passwordInput");
-  const signupBtn = document.getElementById("signupBtn");
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const userStatus = document.getElementById("userStatus");
-
-  nameInput.value = localStorage.getItem("chatUsername") || "";
-
-  nameInput.addEventListener("input", () => {
-    localStorage.setItem("chatUsername", nameInput.value);
-  });
-
-  signupBtn.onclick = async () => {
-    try {
-      await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-      alert("Account created!");
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-
-  loginBtn.onclick = async () => {
-    try {
-      await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-      alert("Logged in!");
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-
-  logoutBtn.onclick = async () => {
-    await signOut(auth);
-  };
-
   onAuthStateChanged(auth, (user) => {
-    if (user) {
-      userStatus.textContent = "Logged in as " + user.email;
-    } else {
-      userStatus.textContent = "Not logged in";
+    if (user) window.location.href = "chat.html";
+  });
+
+  document.getElementById("loginBtn").onclick = async () => {
+    const email = document.getElementById("emailInput").value.trim();
+    const password = document.getElementById("passwordInput").value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = "chat.html";
+    } catch (error) {
+      alert(error.message);
     }
-  });
-
-  async function sendMessage() {
-    const user = auth.currentUser;
-
-    if (!user) {
-      alert("You must log in before sending messages.");
-      return;
-    }
-
-    const name = nameInput.value.trim() || "Anonymous";
-    const text = messageInput.value.trim();
-
-    if (text === "") return;
-
-    await addDoc(collection(db, "messages"), {
-      uid: user.uid,
-      email: user.email,
-      name: name,
-      text: text,
-      createdAt: serverTimestamp()
-    });
-
-    messageInput.value = "";
-  }
-
-  sendBtn.onclick = sendMessage;
-
-  messageInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") sendMessage();
-  });
-
-  const q = query(collection(db, "messages"), orderBy("createdAt"));
-
-  onSnapshot(q, (snapshot) => {
-    chatBox.innerHTML = "";
-
-    snapshot.forEach((doc) => {
-      const msg = doc.data();
-
-      let time = "";
-      if (msg.createdAt) {
-        time = new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-      }
-
-      const messageDiv = document.createElement("div");
-      messageDiv.className = "msg";
-
-      messageDiv.innerHTML = `
-        <div class="username">${msg.name}</div>
-        <div class="text">${msg.text}</div>
-        <div class="time">${time}</div>
-      `;
-
-      chatBox.appendChild(messageDiv);
-    });
-
-    chatBox.scrollTop = chatBox.scrollHeight;
-  });
+  };
 </script>
 
 </body>
