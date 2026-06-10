@@ -32,9 +32,15 @@
 
     <div id="messagesBox"></div>
 
-  <label for="imageInput" id="imageButton">
-  +
-</label>
+    <div class="chat-input">
+      <label for="imageInput" id="imageButton">+</label>
+
+      <input id="imageInput" type="file" accept="image/*" disabled hidden>
+
+      <input id="messageInput" placeholder="Type a message..." disabled>
+
+      <button id="sendBtn" disabled>Send</button>
+    </div>
   </main>
 </div>
 
@@ -90,6 +96,7 @@ const imageInput = document.getElementById("imageInput");
 const sendBtn = document.getElementById("sendBtn");
 const chatTitle = document.getElementById("chatTitle");
 const chatSubtitle = document.getElementById("chatSubtitle");
+const imageButton = document.getElementById("imageButton");
 
 let currentUser = null;
 let currentProfile = null;
@@ -135,15 +142,8 @@ async function loadConversations() {
     ids.add(selectedUid);
   }
 
-  const sentQ = query(
-    collection(db, "messages"),
-    where("senderId", "==", currentUser.uid)
-  );
-
-  const receivedQ = query(
-    collection(db, "messages"),
-    where("receiverId", "==", currentUser.uid)
-  );
+  const sentQ = query(collection(db, "messages"), where("senderId", "==", currentUser.uid));
+  const receivedQ = query(collection(db, "messages"), where("receiverId", "==", currentUser.uid));
 
   const sentSnap = await getDocs(sentQ);
   sentSnap.forEach((d) => {
@@ -191,10 +191,10 @@ async function openConversation(uid) {
   messageInput.disabled = false;
   imageInput.disabled = false;
   sendBtn.disabled = false;
+  imageButton.style.opacity = "1";
+  imageButton.style.pointerEvents = "auto";
 
-  if (unsubscribeMessages) {
-    unsubscribeMessages();
-  }
+  if (unsubscribeMessages) unsubscribeMessages();
 
   const conversationId = getConversationId(currentUser.uid, selectedUid);
 
@@ -326,9 +326,7 @@ async function sendMessage() {
 sendBtn.onclick = sendMessage;
 
 messageInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    sendMessage();
-  }
+  if (e.key === "Enter") sendMessage();
 });
 </script>
 
