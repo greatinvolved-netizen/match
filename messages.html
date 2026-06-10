@@ -34,6 +34,7 @@
 
     <div class="chat-input">
       <input id="messageInput" placeholder="Type a message..." disabled>
+      <input id="imageInput" type="file" accept="image/*" disabled>
       <button id="sendBtn" disabled>Send</button>
     </div>
   </main>
@@ -41,10 +42,11 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signOut 
+
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
 import {
@@ -61,6 +63,13 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
   authDomain: "chat4fun-e22c0.firebaseapp.com",
@@ -74,10 +83,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 const conversationList = document.getElementById("conversationList");
 const messagesBox = document.getElementById("messagesBox");
 const messageInput = document.getElementById("messageInput");
+const imageInput = document.getElementById("imageInput");
 const sendBtn = document.getElementById("sendBtn");
 const chatTitle = document.getElementById("chatTitle");
 const chatSubtitle = document.getElementById("chatSubtitle");
@@ -180,6 +191,7 @@ async function openConversation(uid) {
   chatSubtitle.textContent = selectedProfile.status || "";
 
   messageInput.disabled = false;
+  imageInput.disabled = false;
   sendBtn.disabled = false;
 
   if (unsubscribeMessages) {
@@ -207,8 +219,23 @@ async function openConversation(uid) {
         div.classList.add("mine");
       }
 
-      const text = document.createElement("div");
-      text.textContent = msg.text;
+      if (msg.text) {
+        const text = document.createElement("div");
+        text.textContent = msg.text;
+        div.appendChild(text);
+      }
+
+      if (msg.imageURL) {
+        const img = document.createElement("img");
+        img.src = msg.imageURL;
+        img.alt = "Sent image";
+        img.style.maxWidth = "240px";
+        img.style.maxHeight = "240px";
+        img.style.borderRadius = "14px";
+        img.style.display = "block";
+        img.style.marginTop = "8px";
+        div.appendChild(img);
+      }
 
       const small = document.createElement("small");
 
@@ -221,9 +248,8 @@ async function openConversation(uid) {
       }
 
       small.textContent = `${msg.senderName || "User"} • ${time}`;
-
-      div.appendChild(text);
       div.appendChild(small);
+
       messagesBox.appendChild(div);
     });
 
@@ -233,10 +259,20 @@ async function openConversation(uid) {
   });
 }
 
+async function uploadChatImage(file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const filePath = `chatImages/${currentUser.uid}/${Date.now()}_${safeName}`;
+  const fileRef = ref(storage, filePath);
+
+  await uploadBytes(fileRef, file);
+  return await getDownloadURL(fileRef);
+}
+
 async function sendMessage() {
   const text = messageInput.value.trim();
+  const file = imageInput.files[0];
 
-  if (!text) return;
+  if (!text && !file) return;
 
   if (!currentUser || !selectedUid) {
     alert("No conversation selected.");
@@ -244,6 +280,25 @@ async function sendMessage() {
   }
 
   try {
+    let imageURL = "";
+
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Only image files are allowed.");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image must be under 5 MB.");
+        return;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Uploading...";
+
+      imageURL = await uploadChatImage(file);
+    }
+
     const conversationId = getConversationId(currentUser.uid, selectedUid);
 
     await addDoc(collection(db, "messages"), {
@@ -253,15 +308,20 @@ async function sendMessage() {
       senderName: currentProfile?.username || currentUser.email,
       receiverName: selectedProfile?.username || "User",
       text,
+      imageURL,
       createdAt: serverTimestamp()
     });
 
     messageInput.value = "";
+    imageInput.value = "";
 
     await loadConversations();
 
   } catch (error) {
     alert("Message failed: " + error.message);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send";
   }
 }
 
