@@ -104,6 +104,7 @@ const imageButton = document.getElementById("imageButton");
 let currentUser = null;
 let currentProfile = null;
 let selectedUid = new URLSearchParams(window.location.search).get("uid");
+console.log("Selected UID:", selectedUid);
 imageInput.addEventListener("change", () => {
 
   const file = imageInput.files[0];
