@@ -296,7 +296,11 @@ async function openConversation(uid) {
       }
 
       const avatar = document.createElement("img");
-      avatar.src = msg.senderAvatar || "https://via.placeholder.com/40";
+     avatar.src =
+  msg.senderAvatar &&
+  msg.senderAvatar.startsWith("http")
+    ? msg.senderAvatar
+    : "https://via.placeholder.com/40";
       avatar.alt = "avatar";
       avatar.style.width = "40px";
       avatar.style.height = "40px";
