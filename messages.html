@@ -237,8 +237,58 @@ async function openConversation(uid) {
     snapshot.forEach((docSnap) => {
       const msg = docSnap.data();
 
-      const div = document.createElement("div");
-      div.className = "msg";
+const wrapper = document.createElement("div");
+wrapper.style.display = "flex";
+wrapper.style.alignItems = "flex-start";
+wrapper.style.gap = "10px";
+wrapper.style.marginBottom = "12px";
+
+const avatar = document.createElement("img");
+
+avatar.src =
+  msg.senderId === currentUser.uid
+    ? (currentProfile?.avatar || "https://via.placeholder.com/40")
+    : (selectedProfile?.avatar || "https://via.placeholder.com/40");
+
+avatar.style.width = "40px";
+avatar.style.height = "40px";
+avatar.style.borderRadius = "50%";
+avatar.style.objectFit = "cover";
+
+const bubble = document.createElement("div");
+bubble.className = "msg";
+
+if (msg.senderId === currentUser.uid) {
+  bubble.classList.add("mine");
+}
+
+if (msg.text) {
+  const text = document.createElement("div");
+  text.textContent = msg.text;
+  bubble.appendChild(text);
+}
+
+if (msg.imageURL) {
+  const img = document.createElement("img");
+  img.src = msg.imageURL;
+  img.style.maxWidth = "240px";
+  img.style.borderRadius = "12px";
+  img.style.marginTop = "8px";
+  bubble.appendChild(img);
+}
+
+const small = document.createElement("small");
+small.textContent = `${msg.senderName || "User"} • ${time}`;
+bubble.appendChild(small);
+
+      if (msg.senderId === currentUser.uid) {
+  wrapper.style.justifyContent = "flex-end";
+  wrapper.style.flexDirection = "row-reverse";
+}
+wrapper.appendChild(avatar);
+wrapper.appendChild(bubble);
+
+messagesBox.appendChild(wrapper);
 
       if (msg.senderId === currentUser.uid) {
         div.classList.add("mine");
