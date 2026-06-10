@@ -418,3 +418,35 @@ html, body {
 #imagePreviewContainer {
   flex-shrink: 0;
 }
+html, body {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.message-page {
+  height: calc(100dvh - 58px);
+  overflow: hidden;
+}
+
+.chat-area {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#messagesBox {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.chat-input {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: rgba(10,10,25,.98);
+}
