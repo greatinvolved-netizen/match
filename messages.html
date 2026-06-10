@@ -30,10 +30,11 @@
       <p id="chatSubtitle" class="muted"></p>
     </div>
 
-    <div id="messagesBox"></div>
+  <div id="messagesBox"></div>
 
-    <div id="imagePreviewContainer"></div>
-    <div class="chat-input">
+  <div id="imagePreviewContainer"></div>
+
+  <div class="chat-input">
       <label for="imageInput" id="imageButton">📷</label>
 
       <input id="imageInput" type="file" accept="image/*" disabled hidden>
@@ -94,6 +95,7 @@ const conversationList = document.getElementById("conversationList");
 const messagesBox = document.getElementById("messagesBox");
 const messageInput = document.getElementById("messageInput");
 const imageInput = document.getElementById("imageInput");
+const previewContainer = document.getElementById("imagePreviewContainer");
 const sendBtn = document.getElementById("sendBtn");
 const chatTitle = document.getElementById("chatTitle");
 const chatSubtitle = document.getElementById("chatSubtitle");
@@ -102,6 +104,30 @@ const imageButton = document.getElementById("imageButton");
 let currentUser = null;
 let currentProfile = null;
 let selectedUid = new URLSearchParams(window.location.search).get("uid");
+imageInput.addEventListener("change", () => {
+
+  const file = imageInput.files[0];
+
+  if (!file) {
+    previewContainer.style.display = "none";
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+
+  previewContainer.innerHTML = `
+    <img id="imagePreview" src="${url}">
+    <button id="removePreview">Remove</button>
+  `;
+
+  previewContainer.style.display = "block";
+
+  document.getElementById("removePreview").onclick = () => {
+    imageInput.value = "";
+    previewContainer.innerHTML = "";
+    previewContainer.style.display = "none";
+  };
+});
 let selectedProfile = null;
 let unsubscribeMessages = null;
 
