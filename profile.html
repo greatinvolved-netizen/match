@@ -25,13 +25,21 @@
 
     <section class="panel">
       <h1>Edit Profile</h1>
+
       <input id="usernameInput" placeholder="Username">
       <textarea id="bioInput" rows="5" placeholder="Short bio"></textarea>
       <input id="interestsInput" placeholder="Interests: gaming, music, science">
       <input id="statusInput" placeholder="Status: Available, Busy, Looking to chat">
+
+      <label>Upload Profile Image</label>
+      <input id="avatarFileInput" type="file" accept="image/*">
+
+      <label>Or paste an avatar image URL</label>
       <input id="avatarInput" placeholder="Avatar image URL">
+
       <label>Profile Color</label>
       <input id="colorInput" type="color" value="#667eea">
+
       <button id="saveBtn">Save Profile</button>
     </section>
   </div>
@@ -39,8 +47,28 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+import {
+  getAuth,
+  onAuthStateChanged,
+  updateProfile,
+  signOut
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
@@ -55,18 +83,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 let currentUser = null;
+let currentAvatarURL = "";
 
 const usernameInput = document.getElementById("usernameInput");
 const bioInput = document.getElementById("bioInput");
 const interestsInput = document.getElementById("interestsInput");
 const statusInput = document.getElementById("statusInput");
 const avatarInput = document.getElementById("avatarInput");
+const avatarFileInput = document.getElementById("avatarFileInput");
 const colorInput = document.getElementById("colorInput");
 const avatarPreview = document.getElementById("avatarPreview");
 const previewName = document.getElementById("previewName");
 const previewBio = document.getElementById("previewBio");
+const saveBtn = document.getElementById("saveBtn");
 
 onAuthStateChanged(auth, async user => {
   if (!user) {
@@ -75,15 +107,18 @@ onAuthStateChanged(auth, async user => {
   }
 
   currentUser = user;
+
   const snap = await getDoc(doc(db, "users", user.uid));
 
   if (snap.exists()) {
     const data = snap.data();
+
     usernameInput.value = data.username || "";
     bioInput.value = data.bio || "";
     interestsInput.value = data.interests || "";
     statusInput.value = data.status || "";
     avatarInput.value = data.avatar || "";
+    currentAvatarURL = data.avatar || "";
     colorInput.value = data.color || "#667eea";
   } else {
     usernameInput.value = user.displayName || "";
@@ -101,42 +136,101 @@ document.getElementById("logoutBtn").onclick = async () => {
   el.addEventListener("input", updatePreview);
 });
 
+avatarFileInput.addEventListener("change", () => {
+  const file = avatarFileInput.files[0];
+
+  if (file) {
+    if (!file.type.startsWith("image/")) {
+      alert("Only image files are allowed.");
+      avatarFileInput.value = "";
+      return;
+    }
+
+    avatarPreview.src = URL.createObjectURL(file);
+  }
+});
+
 function updatePreview() {
   previewName.textContent = usernameInput.value || "Your Profile";
   previewBio.textContent = bioInput.value || "Your bio preview appears here.";
-  avatarPreview.src = avatarInput.value || "https://via.placeholder.com/120";
+
+  const typedURL = avatarInput.value.trim();
+  avatarPreview.src = typedURL || currentAvatarURL || "https://via.placeholder.com/120";
   avatarPreview.style.borderColor = colorInput.value;
 }
 
-document.getElementById("saveBtn").onclick = async () => {
+async function uploadProfileImage(file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const filePath = `profileImages/${currentUser.uid}/${Date.now()}_${safeName}`;
+  const fileRef = ref(storage, filePath);
+
+  await uploadBytes(fileRef, file);
+  return await getDownloadURL(fileRef);
+}
+
+saveBtn.onclick = async () => {
   if (!currentUser) return;
 
   const username = usernameInput.value.trim();
+
   if (!username) {
     alert("Username required.");
     return;
   }
 
-  const data = {
-    uid: currentUser.uid,
-    email: currentUser.email,
-    username,
-    bio: bioInput.value.trim(),
-    interests: interestsInput.value.trim(),
-    status: statusInput.value.trim() || "Available",
-    avatar: avatarInput.value.trim(),
-    color: colorInput.value,
-    updatedAt: serverTimestamp()
-  };
+  try {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
 
-  await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
+    let avatar = avatarInput.value.trim() || currentAvatarURL;
+    const file = avatarFileInput.files[0];
 
-  await updateProfile(currentUser, {
-    displayName: data.username,
-    photoURL: data.avatar
-  });
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Only image files are allowed.");
+        return;
+      }
 
-  alert("Profile saved!");
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image must be under 5 MB.");
+        return;
+      }
+
+      avatar = await uploadProfileImage(file);
+    }
+
+    const data = {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      username,
+      bio: bioInput.value.trim(),
+      interests: interestsInput.value.trim(),
+      status: statusInput.value.trim() || "Available",
+      avatar,
+      color: colorInput.value,
+      updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
+
+    await updateProfile(currentUser, {
+      displayName: data.username,
+      photoURL: data.avatar
+    });
+
+    currentAvatarURL = avatar;
+    avatarInput.value = avatar;
+    avatarFileInput.value = "";
+
+    updatePreview();
+
+    alert("Profile saved!");
+  } catch (error) {
+    alert("Profile save failed: " + error.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Profile";
+  }
 };
 </script>
 
