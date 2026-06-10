@@ -401,7 +401,10 @@ async function sendMessage() {
       senderId: currentUser.uid,
       receiverId: selectedUid,
       senderName: currentProfile?.username || currentUser.email,
-      senderAvatar: currentProfile?.avatar || "",
+     senderAvatar:
+  currentProfile?.avatar && currentProfile.avatar.startsWith("http")
+    ? currentProfile.avatar
+    : "",
       receiverName: selectedProfile?.username || "User",
       text,
       imageURL,
