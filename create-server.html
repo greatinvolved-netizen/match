@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head><title>Create Server</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="topbar">
+  <div class="logo">Chat4Fun</div>
+  <nav class="nav"><a href="servers.html">Servers</a><a href="directory.html">Browse</a><a href="messages.html">Messages</a></nav>
+</header>
+<main class="container">
+  <section class="panel" style="max-width:600px;margin:auto">
+    <h1>Create Server</h1>
+    <input id="nameInput" placeholder="Server name">
+    <textarea id="descriptionInput" rows="4" placeholder="Server description"></textarea>
+    <button id="createBtn">Create Server</button>
+  </section>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+  authDomain: "chat4fun-e22c0.firebaseapp.com",
+  projectId: "chat4fun-e22c0",
+  storageBucket: "chat4fun-e22c0.firebasestorage.app",
+  messagingSenderId: "937250432936",
+  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+  measurementId: "G-NJMKG24NRM"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+let currentUser = null;
+onAuthStateChanged(auth, user => {
+  if (!user) { window.location.href = "index.html"; return; }
+  currentUser = user;
+});
+document.getElementById("createBtn").onclick = async () => {
+  const name = document.getElementById("nameInput").value.trim();
+  const description = document.getElementById("descriptionInput").value.trim();
+  if (!name) { alert("Server name required."); return; }
+  const serverRef = await addDoc(collection(db, "servers"), {
+    name, description, ownerId: currentUser.uid, createdAt: serverTimestamp()
+  });
+  await setDoc(doc(db, "serverMembers", serverRef.id + "_" + currentUser.uid), {
+    serverId: serverRef.id, uid: currentUser.uid, role: "owner", joinedAt: serverTimestamp()
+  });
+  await addDoc(collection(db, "channels"), {
+    serverId: serverRef.id, name: "general", createdAt: serverTimestamp()
+  });
+  window.location.href = "server.html?serverId=" + serverRef.id;
+};
+</script></body></html>
