@@ -216,13 +216,25 @@ async function loadConversations() {
       const div = document.createElement("div");
       div.className = "conversation";
 
-      const avatar = document.createElement("img");
-      avatar.src = otherUser.avatar || "https://via.placeholder.com/36";
-      avatar.alt = "avatar";
-      avatar.style.width = "32px";
-      avatar.style.height = "32px";
-      avatar.style.borderRadius = "50%";
-      avatar.style.objectFit = "cover";
+const avatar = document.createElement("img");
+
+if (
+  msg.senderAvatar &&
+  msg.senderAvatar.startsWith("http")
+) {
+  avatar.src = msg.senderAvatar;
+} else {
+  avatar.src =
+    "https://ui-avatars.com/api/?name=" +
+    encodeURIComponent(msg.senderName || "User") +
+    "&background=667eea&color=ffffff";
+}
+
+avatar.alt = "avatar";
+avatar.style.width = "40px";
+avatar.style.height = "40px";
+avatar.style.borderRadius = "50%";
+avatar.style.objectFit = "cover";
       avatar.style.marginRight = "8px";
       avatar.style.verticalAlign = "middle";
 
