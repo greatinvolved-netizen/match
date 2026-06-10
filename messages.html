@@ -41,10 +41,24 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signOut 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
 import {
-  getFirestore, collection, addDoc, query, where, orderBy,
-  onSnapshot, serverTimestamp, doc, getDoc, getDocs
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  doc,
+  getDoc,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -74,19 +88,22 @@ let selectedUid = new URLSearchParams(window.location.search).get("uid");
 let selectedProfile = null;
 let unsubscribeMessages = null;
 
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "index.html";
     return;
   }
 
   currentUser = user;
+
   const ownSnap = await getDoc(doc(db, "users", user.uid));
-  currentProfile = ownSnap.exists() ? ownSnap.data() : { username: user.email };
+  currentProfile = ownSnap.exists()
+    ? ownSnap.data()
+    : { username: user.email };
 
   await loadConversations();
 
-  if (selectedUid) {
+  if (selectedUid && selectedUid !== currentUser.uid) {
     await openConversation(selectedUid);
   }
 });
@@ -103,29 +120,50 @@ function getConversationId(a, b) {
 async function loadConversations() {
   conversationList.innerHTML = "";
 
-  const sentQ = query(collection(db, "messages"), where("senderId", "==", currentUser.uid));
-  const receivedQ = query(collection(db, "messages"), where("receiverId", "==", currentUser.uid));
-
   const ids = new Set();
 
+  if (selectedUid && selectedUid !== currentUser.uid) {
+    ids.add(selectedUid);
+  }
+
+  const sentQ = query(
+    collection(db, "messages"),
+    where("senderId", "==", currentUser.uid)
+  );
+
+  const receivedQ = query(
+    collection(db, "messages"),
+    where("receiverId", "==", currentUser.uid)
+  );
+
   const sentSnap = await getDocs(sentQ);
-  sentSnap.forEach(d => ids.add(d.data().receiverId));
+  sentSnap.forEach((d) => {
+    const data = d.data();
+    if (data.receiverId) ids.add(data.receiverId);
+  });
 
   const receivedSnap = await getDocs(receivedQ);
-  receivedSnap.forEach(d => ids.add(d.data().senderId));
-
-  if (selectedUid) ids.add(selectedUid);
+  receivedSnap.forEach((d) => {
+    const data = d.data();
+    if (data.senderId) ids.add(data.senderId);
+  });
 
   for (const uid of ids) {
     if (!uid || uid === currentUser.uid) continue;
 
     const userSnap = await getDoc(doc(db, "users", uid));
-    const user = userSnap.exists() ? userSnap.data() : { uid, username: "User" };
+    const otherUser = userSnap.exists()
+      ? userSnap.data()
+      : { uid, username: "User" };
 
     const div = document.createElement("div");
     div.className = "conversation";
-    div.textContent = user.username || "User";
-    div.onclick = () => openConversation(uid);
+    div.textContent = otherUser.username || "User";
+
+    div.onclick = () => {
+      openConversation(uid);
+    };
+
     conversationList.appendChild(div);
   }
 }
@@ -134,83 +172,106 @@ async function openConversation(uid) {
   selectedUid = uid;
 
   const snap = await getDoc(doc(db, "users", uid));
-  selectedProfile = snap.exists() ? snap.data() : { uid, username: "User" };
+  selectedProfile = snap.exists()
+    ? snap.data()
+    : { uid, username: "User" };
 
   chatTitle.textContent = selectedProfile.username || "User";
   chatSubtitle.textContent = selectedProfile.status || "";
+
   messageInput.disabled = false;
   sendBtn.disabled = false;
 
-  if (unsubscribeMessages) unsubscribeMessages();
+  if (unsubscribeMessages) {
+    unsubscribeMessages();
+  }
 
   const conversationId = getConversationId(currentUser.uid, selectedUid);
 
-  const q = query(
+  const messagesQuery = query(
     collection(db, "messages"),
     where("conversationId", "==", conversationId),
     orderBy("createdAt")
   );
 
-  unsubscribeMessages = onSnapshot(q, snapshot => {
+  unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
     messagesBox.innerHTML = "";
 
-    snapshot.forEach(docSnap => {
+    snapshot.forEach((docSnap) => {
       const msg = docSnap.data();
 
       const div = document.createElement("div");
-      div.className = "msg" + (msg.senderId === currentUser.uid ? " mine" : "");
+      div.className = "msg";
 
-      const time = msg.createdAt
-        ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        : "";
+      if (msg.senderId === currentUser.uid) {
+        div.classList.add("mine");
+      }
 
-      div.innerHTML = `
-        <div>${escapeHTML(msg.text)}</div>
-        <small>${escapeHTML(msg.senderName || "")} • ${time}</small>
-      `;
+      const text = document.createElement("div");
+      text.textContent = msg.text;
 
+      const small = document.createElement("small");
+
+      let time = "";
+      if (msg.createdAt) {
+        time = new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      small.textContent = `${msg.senderName || "User"} • ${time}`;
+
+      div.appendChild(text);
+      div.appendChild(small);
       messagesBox.appendChild(div);
     });
 
     messagesBox.scrollTop = messagesBox.scrollHeight;
+  }, (error) => {
+    alert("Message loading error: " + error.message);
   });
 }
 
 async function sendMessage() {
   const text = messageInput.value.trim();
-  if (!text || !selectedUid || !currentUser) return;
 
-  const conversationId = getConversationId(currentUser.uid, selectedUid);
+  if (!text) return;
 
-  await addDoc(collection(db, "messages"), {
-    conversationId,
-    senderId: currentUser.uid,
-    receiverId: selectedUid,
-    senderName: currentProfile?.username || currentUser.email,
-    receiverName: selectedProfile?.username || "User",
-    text,
-    createdAt: serverTimestamp()
-  });
+  if (!currentUser || !selectedUid) {
+    alert("No conversation selected.");
+    return;
+  }
 
-  messageInput.value = "";
-  await loadConversations();
+  try {
+    const conversationId = getConversationId(currentUser.uid, selectedUid);
+
+    await addDoc(collection(db, "messages"), {
+      conversationId,
+      senderId: currentUser.uid,
+      receiverId: selectedUid,
+      senderName: currentProfile?.username || currentUser.email,
+      receiverName: selectedProfile?.username || "User",
+      text,
+      createdAt: serverTimestamp()
+    });
+
+    messageInput.value = "";
+
+    await loadConversations();
+
+  } catch (error) {
+    alert("Message failed: " + error.message);
+  }
 }
 
 sendBtn.onclick = sendMessage;
 
-messageInput.addEventListener("keypress", e => {
-  if (e.key === "Enter") sendMessage();
+messageInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    sendMessage();
+  }
 });
-
-function escapeHTML(str) {
-  return String(str).replace(/[&<>"']/g, m => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  }[m]));
-}
 </script>
 
 </body>
