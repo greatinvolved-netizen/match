@@ -294,68 +294,38 @@ button:hover {
 
 .chat-input {
   display: flex;
+  align-items: center;
   gap: 10px;
   padding: 14px;
   border-top: 1px solid rgba(255,255,255,.1);
+  background: rgba(10,10,25,.95);
 }
 
-.chat-input input {
-  margin: 0;
+#messageInput {
+  flex: 1;
+  min-width: 0;
 }
 
-.chat-input button {
-  width: auto;
-  padding: 0 22px;
-  margin: 0;
-}
-
-@media (max-width: 800px) {
-  .hero, .profile-layout, .message-page {
-    grid-template-columns: 1fr;
-  }
-
-  .hero h1 {
-    font-size: 34px;
-  }
-
-  .message-page {
-    height: auto;
-  }
-
-  .conversations {
-    max-height: 220px;
-    border-right: none;
-    border-bottom: 1px solid rgba(255,255,255,.1);
-  }
-
-  #messagesBox {
-    min-height: 430px;
-  }
-
-  .nav {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
 #imageButton {
   width: 42px;
   height: 42px;
-
+  min-width: 42px;
   border-radius: 50%;
-
-  background: linear-gradient(
-    135deg,
-    #667eea,
-    #764ba2
-  );
-
-  color: white;
-
-  font-size: 26px;
-  font-weight: bold;
-
+  background: rgba(255,255,255,.12);
   display: flex;
   align-items: center;
   justify-content: center;
-
+  font-size: 24px;
   cursor: pointer;
+  opacity: .5;
+  pointer-events: none;
+}
+
+#imageButton:hover {
+  background: rgba(255,255,255,.2);
+}
+
+#sendBtn {
+  width: auto;
+  min-width: 70px;
 }
