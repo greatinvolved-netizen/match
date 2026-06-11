@@ -61,6 +61,35 @@ onAuthStateChanged(auth, async user => {
 });
 document.getElementById("logoutBtn").onclick = async () => { await signOut(auth); window.location.href = "index.html"; };
 document.getElementById("addChannelBtn").onclick = async () => {
+  const input = document.getElementById("channelNameInput");
+
+  const name = input.value
+    .trim()
+    .replace(/\s+/g, "-")
+    .toLowerCase();
+
+  if (!name) {
+    alert("Enter a channel name.");
+    return;
+  }
+
+  if (!serverId) {
+    alert("No server selected.");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "channels"), {
+      serverId: serverId,
+      name: name,
+      createdAt: serverTimestamp()
+    });
+
+    input.value = "";
+  } catch (error) {
+    alert("Channel creation failed: " + error.message);
+  }
+};
   const name = document.getElementById("channelNameInput").value.trim().replace(/\s+/g, "-").toLowerCase();
   if (!name) return;
   await addDoc(collection(db, "channels"), { serverId, name, createdAt: serverTimestamp() });
