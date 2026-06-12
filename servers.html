@@ -1,0 +1,135 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Servers - Chat4Fun</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">Chat4Fun</div>
+
+  <nav class="nav">
+    <a href="servers.html">Servers</a>
+    <a href="directory.html">Browse</a>
+    <a href="messages.html">Messages</a>
+    <a href="profile.html">My Profile</a>
+    <button id="logoutBtn">Log Out</button>
+  </nav>
+</header>
+
+<div class="container">
+
+  <div class="hero-panel">
+    <h1>Servers</h1>
+    <p>Create communities and chat with groups of people.</p>
+
+    <button onclick="window.location.href='create-server.html'">
+      Create Server
+    </button>
+  </div>
+
+  <h2 style="margin-top:30px;">Available Servers</h2>
+
+  <div id="serverGrid" class="profile-grid"></div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+}
+from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+import {
+  getFirestore,
+  collection,
+  onSnapshot
+}
+from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpYnAEhMuyJlzFtgQ_LOVS1d8n5YMR3Fk",
+  authDomain: "chat4fun-e22c0.firebaseapp.com",
+  projectId: "chat4fun-e22c0",
+  storageBucket: "chat4fun-e22c0.firebasestorage.app",
+  messagingSenderId: "937250432936",
+  appId: "1:937250432936:web:db4d94d82171cc98519f9d",
+  measurementId: "G-NJMKG24NRM"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const serverGrid = document.getElementById("serverGrid");
+
+onAuthStateChanged(auth, (user) => {
+
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  loadServers();
+
+});
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await signOut(auth);
+  window.location.href = "index.html";
+};
+
+function loadServers() {
+
+  onSnapshot(collection(db, "servers"), (snapshot) => {
+
+    serverGrid.innerHTML = "";
+
+    snapshot.forEach((docSnap) => {
+
+      const server = docSnap.data();
+      const serverId = docSnap.id;
+
+      const card = document.createElement("div");
+      card.className = "profile-card";
+
+      card.innerHTML = `
+        <h3>${server.name || "Unnamed Server"}</h3>
+
+        <p>
+          ${server.description || "No description"}
+        </p>
+
+        <button>
+          Open Server
+        </button>
+      `;
+
+      card.querySelector("button").onclick = () => {
+        window.location.href =
+          "server.html?serverId=" + serverId;
+      };
+
+      serverGrid.appendChild(card);
+
+    });
+
+  });
+
+}
+
+</script>
+
+</body>
+</html>
+```
