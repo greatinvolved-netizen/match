@@ -195,17 +195,6 @@ function loadChannels() {
   unsubscribeChannels = onSnapshot(channelsQuery, async (snapshot) => {
     channelsList.innerHTML = "";
 
-    if (snapshot.empty) {
-      const generalRef = await addDoc(collection(db, "channels"), {
-        serverId: serverId,
-        name: "general",
-        createdBy: currentUser.uid,
-        createdAt: serverTimestamp()
-      });
-
-      openChannel(generalRef.id, "general");
-      return;
-    }
 
     snapshot.forEach((docSnap) => {
       const channel = docSnap.data();
